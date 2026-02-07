@@ -1,105 +1,135 @@
-// Chat container aur input field elements ko select kar rahe hain
-const chatContainer = document.getElementById('chatContainer');
-const inputField = document.getElementById('messageInput');
-const sendButton = document.getElementById('sendButton');
-const typingIndicator = document.getElementById('typingIndicator');
-const imageInput = document.getElementById('imageInput'); // Image upload ke liye input
+const chatContainer = document.getElementById("chatContainer");
+const inputField = document.getElementById("messageInput");
+const sendButton = document.getElementById("sendButton");
+const typingIndicator = document.getElementById("typingIndicator");
+const imageInput = document.getElementById("imageInput");
+const clearChatButton = document.getElementById("clearChatButton");
+const voiceButton = document.getElementById("voiceButton");
+const darkModeToggle = document.getElementById("darkModeToggle");
 
-// Messages ko chat window me add karne ka function
-// sender = 'User' ya 'Bot', message = text ya image URL, isImage = agar image hai to true
+const authSection = document.getElementById("authSection");
+const chatSection = document.getElementById("chatSection");
+const registerBtn = document.getElementById("registerBtn");
+const loginBtn = document.getElementById("loginBtn");
+
+let token = localStorage.getItem("token");
+
+// Auto login
+if (token) {
+  authSection.style.display = "none";
+  chatSection.style.display = "block";
+  loadChats();
+}
+
+// 🔐 Register
+registerBtn.onclick = async () => {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  await fetch("/api/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  alert("Registered! Now login.");
+};
+
+// 🔑 Login
+loginBtn.onclick = async () => {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  const res = await fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  const data = await res.json();
+  token = data.token;
+  localStorage.setItem("token", token);
+
+  authSection.style.display = "none";
+  chatSection.style.display = "block";
+  loadChats();
+};
+
+// 💬 Load chat history
+async function loadChats() {
+  const res = await fetch("/api/chats", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const chats = await res.json();
+  chatContainer.innerHTML = "";
+  chats.forEach(chat => addMessageToChat(chat.role === "user" ? "User" : "Bot", chat.content));
+}
+
+// 🗑 Clear chats
+clearChatButton.onclick = async () => {
+  await fetch("/api/chats", {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  chatContainer.innerHTML = "";
+};
+
+// 🌙 Dark mode
+darkModeToggle.onclick = () => {
+  document.body.classList.toggle("dark");
+};
+
+// 💬 Add message
 function addMessageToChat(sender, message, isImage = false) {
-  const messageElem = document.createElement('div'); // naya div banate hain message ke liye
-  messageElem.classList.add('message', sender.toLowerCase()); // class add karte hain, jaise 'message user' ya 'message bot'
+  const messageElem = document.createElement("div");
+  messageElem.classList.add("message", sender.toLowerCase());
 
   if (isImage) {
-    // Agar message image hai to img element create karte hain
-    const img = document.createElement('img');
-    img.src = message; // image URL set karte hain
-    img.alt = sender + ' image'; // alt text
-    img.style.maxWidth = '200px'; // image size limit karte hain
-    img.style.borderRadius = '8px'; // thoda rounded corners
-    messageElem.appendChild(img); // message div me image add karte hain
+    const img = document.createElement("img");
+    img.src = message;
+    img.style.maxWidth = "200px";
+    messageElem.appendChild(img);
   } else {
-    // Agar message text hai to textContent set karte hain
-    messageElem.textContent = `${sender}: ${message}`;
+    messageElem.textContent = message;
   }
 
-  chatContainer.appendChild(messageElem); // chat container me message add kar dete hain
-  chatContainer.scrollTop = chatContainer.scrollHeight; // scroll karte hain taaki latest message dikhe
+  chatContainer.appendChild(messageElem);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// Backend ko message bhejne aur bot se reply lene wali async function
-async function sendMessageToBackend(message, isImage = false) {
-  try {
-    typingIndicator.style.display = 'block'; // Typing indicator show karte hain (bot typing dikhane ke liye)
-
-    // Agar image bhejna hai to {image: ...}, warna {message: ...}
-    const bodyData = isImage ? 
-      { image: message } : 
-      { message: message };
-
-    // Backend ko POST request bhejte hain API endpoint pe
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bodyData),
-    });
-
-    typingIndicator.style.display = 'none'; // Typing indicator hata dete hain jab response aa jaye
-
-    if (!response.ok) {
-      throw new Error('Network response was not ok'); // agar response galat ho to error throw karte hain
-    }
-
-    const data = await response.json(); // response ko JSON me convert karte hain
-    return data.reply; // bot ka reply return karte hain
-  } catch (error) {
-    typingIndicator.style.display = 'none'; // error hone par bhi typing indicator hata dena
-    console.error('Error sending message:', error); // console me error print karte hain
-    return "Sorry, something went wrong."; // user ko error message return karte hain
-  }
-}
-
-// Send button pe click hone par chalne wala code
-sendButton.addEventListener('click', async () => {
-  const userMessage = inputField.value.trim(); // input se user ka message lete hain aur extra spaces hata dete hain
-
-  // Agar na to message hai na image upload hua hai to kuch nahi karna
+// 📤 Send message
+sendButton.onclick = async () => {
+  const userMessage = inputField.value.trim();
   if (!userMessage && !imageInput.files.length) return;
 
-  // Agar user ne text likha hai to message chat me dikhaye
-  if (userMessage) {
-    addMessageToChat('User', userMessage);
-  }
+  if (userMessage) addMessageToChat("User", userMessage);
 
-  // Agar user ne image upload kiya hai to image file read kar ke chat me dikhaye aur backend bheje
-  if (imageInput.files.length > 0) {
-    const file = imageInput.files[0];
-    const reader = new FileReader();
+  typingIndicator.style.display = "block";
 
-    // Jab image file read ho jaye to ye function chalega
-    reader.onload = async function(e) {
-      const imageDataUrl = e.target.result; // image ko base64 data URL me convert kar lete hain
-      addMessageToChat('User', imageDataUrl, true); // chat me user ki image show karte hain
+  const formData = new FormData();
+  formData.append("message", userMessage);
+  if (imageInput.files[0]) formData.append("image", imageInput.files[0]);
 
-      const botReply = await sendMessageToBackend(imageDataUrl, true); // backend ko image bhejte hain
-      addMessageToChat('Bot', botReply); // bot ka reply chat me dikhate hain
-    };
+  inputField.value = "";
+  imageInput.value = "";
 
-    reader.readAsDataURL(file); // image ko base64 me convert karne ke liye read karte hain
-    imageInput.value = ''; // image input clear kar dete hain taaki fir upload kar saken
-  } else {
-    // Agar sirf text message hai to backend bhejte hain aur input clear kar dete hain
-    inputField.value = '';
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
 
-    const botReply = await sendMessageToBackend(userMessage);
-    addMessageToChat('Bot', botReply);
-  }
+  const data = await res.json();
+  typingIndicator.style.display = "none";
+  addMessageToChat("Bot", data.reply);
+};
+
+// ⌨ Enter key
+inputField.addEventListener("keydown", e => {
+  if (e.key === "Enter") sendButton.click();
 });
 
-// User jab enter key dabaye to bhi message send ho jaye
-inputField.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    sendButton.click(); // Send button ka click event trigger kar dete hain
-  }
-});
+// 🎙 Voice input
+voiceButton.onclick = () => {
+  alert("Voice input feature coming soon (backend ready)!");
+};
