@@ -2,20 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI Chatbot</title>
+  <title>AI Chat App</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="chat-container">
-    <div id="chat-window"></div>
-    <div id="typing-indicator" style="display:none;">AI is typing...</div>
-    <form id="chat-form">
-      <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off" />
-      <input type="file" id="image-input" accept="image/*" />
-      <button type="submit">Send</button>
-    </form>
+  <div class="app">
+    <h2>AI Chatbot</h2>
+
+    <div id="authSection">
+      <input id="username" placeholder="Username" />
+      <input id="password" type="password" placeholder="Password" />
+      <button id="registerBtn">Register</button>
+      <button id="loginBtn">Login</button>
+    </div>
+
+    <div id="chatSection" style="display:none;">
+      <div class="top-bar">
+        <button id="darkModeToggle">🌙 Dark Mode</button>
+        <button id="clearChatButton">🗑 Clear Chat</button>
+      </div>
+
+      <div id="chatContainer" class="chat-box"></div>
+      <div id="typingIndicator" class="typing" style="display:none;">Bot is typing...</div>
+
+      <div class="input-area">
+        <input type="file" id="imageInput" accept="image/*" />
+        <input type="text" id="messageInput" placeholder="Type your message..." />
+        <button id="sendButton">Send</button>
+        <button id="voiceButton">🎤</button>
+      </div>
+    </div>
   </div>
+
   <script src="script.js"></script>
 </body>
-</html>
+                            </html>
